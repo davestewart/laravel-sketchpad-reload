@@ -1,0 +1,37 @@
+{
+  "name": "sketchpad-reload",
+  "version": "1.0.0",
+  "description": "File watching functionality for Laravel Sketchpad",
+  "main": "index.js",
+  "dependencies": {
+    "sketchpad-livereload": "^0.1.0"
+  },
+  "devDependencies": {
+    "browser-sync": "^2.18.8",
+    "callsite": "^1.0.0",
+    "chokidar": "^1.6.1",
+    "colors": "^1.1.2",
+    "livereload": "^0.6.2",
+    "mini-lr": "^0.1.9",
+    "path": "^0.12.7",
+    "yargs": "^7.0.2"
+  },
+  "scripts": {
+    "options": "node options.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/davestewart/laravel-sketchpad-reload.git"
+  },
+  "keywords": [
+    "laravel",
+    "sketchpad"
+  ],
+  "author": "Dave Stewart <dave@davestewart.io>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davestewart/laravel-sketchpad-reload/issues"
+  },
+  "homepage": "https://github.com/davestewart/laravel-sketchpad-reload#readme"
+}
