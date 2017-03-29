@@ -1,7 +1,7 @@
 {
   "name": "sketchpad-reload",
   "version": "1.0.0",
-  "description": "File watching functionality for Laravel Sketchpad",
+  "description": "Live-reload functionality for Laravel Sketchpad",
   "main": "index.js",
   "dependencies": {
   },
