@@ -26,7 +26,7 @@ function log (value) {
 }
 
 function makeGlob (path, ext) {
-  return path.replace(/\/*$/, '/**/') + (ext || '*')
+  return path.replace(/\/*$/, '/') + '**/*' + (ext || '')
 }
 
 function pad (str, length) {
@@ -36,14 +36,27 @@ function pad (str, length) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// watch
+// helpers
+// ------------------------------------------------------------------------------------------------
+
+function getPaths (settings) {
+  return settings.paths.controllers
+    .filter(obj => obj.enabled)
+    .map(obj => obj.path)
+    .concat(settings.paths.assets)
+    .concat(settings.paths.views)
+    .concat(settings.livereload.paths)
+}
+
+// ------------------------------------------------------------------------------------------------
+// main
 // ------------------------------------------------------------------------------------------------
 
 function watch () {
   // properties
   const root = this.root
   const paths = [].concat(this.paths)
-  const settings = this.settings.livereload
+  const settings = this.settings
   const options = {
     usePolling: settings.usePolling,
     ignoreInitial: true
@@ -58,7 +71,7 @@ function watch () {
 
   const restart = () => {
     this.load()
-    if (JSON.stringify(settings) !== JSON.stringify(this.settings.livereload)) {
+    if (JSON.stringify(settings) !== JSON.stringify(this.settings)) {
       wp.close()
       ws.close()
       server.close();
@@ -80,7 +93,7 @@ function watch () {
 
   // debug
   const verb = settings.usePolling ? 'polling' : 'watching'
-  log('Starting Sketchpad Reload, ' + verb + ' "' + settings.host + '":')
+  log('Starting Sketchpad Reload, ' + verb + ' "' + settings.host + '" paths:')
   console.log(paths.map(p => '  - ' + colors.cyan(p)).join('\n'))
 
   // start
@@ -88,66 +101,44 @@ function watch () {
   server.watch('')
 }
 
-// ------------------------------------------------------------------------------------------------
-// main
-// ------------------------------------------------------------------------------------------------
-
 function load () {
   const str = fs.readFileSync(settingsPath, 'utf8')
   if (str) {
-    // settings
-    this.settings = JSON.parse(str)
-
-    // paths
-    let paths = this.settings.paths.controllers
-      .filter(obj => obj.enabled)
-      .map(obj => obj.path)
-      .concat(settings.paths.assets)
-      .concat(settings.paths.views)
-      .concat(settings.livereload.paths)
-
-    // abs globs
-    this.paths = paths
-      .map(path => makeGlob(path))
+    const settings = JSON.parse(str)
+    this.settings = settings.livereload
+    this.paths = getPaths(settings)
       .map(p => path.normalize(this.root + '/' + p))
+      .map(p => makeGlob(p))
   }
+  return this
 }
 
 function init (root, storage) {
   // root path
   const calling = path.dirname(stack()[1].getFileName()) + '/'
-  if (!root) {
-    root = calling
-  }
-  else {
-    if (!path.isAbsolute(root)) {
-      root = path.normalize(calling + root)
-    }
-  }
+  sketchpad.root = !root
+    ? root = calling
+    : path.isAbsolute(root)
+      ? root
+      : path.normalize(calling + root)
 
   // settings path
-  const support = path.normalize(root + '/' + (storage || 'storage') + '/')
-  settingsPath = support + 'sketchpad/settings.json'
-
-  sketchpad = {
-    // properties
-    root: root,
-    settings: {},
-    paths: [],
-
-    // methods
-    load: load,
-    watch: watch
-  }
+  settingsPath = path.normalize(sketchpad.root + '/' + (storage || 'storage') + '/sketchpad/settings.json')
 
   // settings
-  sketchpad.load()
-
-  // return
-  return sketchpad
+  return sketchpad.load()
 }
 
+// ------------------------------------------------------------------------------------------------
+// main
+
 let settingsPath = ''
-let sketchpad = {}
+let sketchpad = {
+  root: '',
+  paths: [],
+  settings: {},
+  load: load,
+  watch: watch
+}
 
 module.exports = init
