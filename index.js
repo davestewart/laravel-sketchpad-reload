@@ -2,214 +2,143 @@
 
 // ------------------------------------------------------------------------------------------------
 // libs
+// ------------------------------------------------------------------------------------------------
 
-	// utils
-	const argv    = require('yargs').argv,
-    stack       = require('callsite'),
-		chokidar    = require('chokidar'),
-		colors		  = require('colors'),
-		path		    = require('path')
-
+const stack = require('callsite'),
+  livereload = require('livereload'),
+  chokidar = require('chokidar'),
+  colors = require('colors'),
+  path = require('path'),
+  fs = require('fs')
 
 // ------------------------------------------------------------------------------------------------
 // utils
+// ------------------------------------------------------------------------------------------------
 
-	function timestamp ()
-	{
-		const timestamp = (new Date()).toString().match(/\d{2}:\d{2}:\d{2}/)[0]
-		return '[' + colors.gray(timestamp) + ']'
-	}
+function timestamp () {
+  const timestamp = (new Date()).toString().match(/\d{2}:\d{2}:\d{2}/)[0]
+  return '[' + colors.gray(timestamp) + ']'
+}
 
-	function log(value)
-	{
-		const values = Array.prototype.slice.call(arguments).join(' ')
-		console.log(timestamp() + ' ' + values)
-	}
+function log (value) {
+  const values = Array.prototype.slice.call(arguments).join(' ')
+  console.log(timestamp() + ' ' + values)
+}
 
-	function logPaths(watcher, paths)
-	{
-		log('Starting', watcher)
-    const verb = watchOptions.usePolling ? 'Polling' : 'Watching'
-		log(verb + ' paths:')
-		console.log(paths.map(p => '  - ' + colors.magenta(p)).join('\n'))
-	}
+function makeGlob (path, ext) {
+  return path.replace(/\/*$/, '/') + '**/*' + (ext || '')
+}
 
-  function makeGlob (path, ext)
-  {
-    ext = ext || ''
-    return path.replace(/\/*$/, '/') + '**/*'
+function pad (str, length) {
+  str = String(str)
+  while (str.length < length) str += ' '
+  return str
+}
+
+// ------------------------------------------------------------------------------------------------
+// helpers
+// ------------------------------------------------------------------------------------------------
+
+function getPaths (settings) {
+  return settings.paths.controllers
+    .filter(obj => obj.enabled)
+    .map(obj => obj.path)
+    .concat(settings.paths.assets)
+    .concat(settings.paths.views)
+    .concat(settings.livereload.paths)
+}
+
+// ------------------------------------------------------------------------------------------------
+// main
+// ------------------------------------------------------------------------------------------------
+
+function watch () {
+  // properties
+  const root = this.root
+  const paths = [].concat(this.paths)
+  const settings = this.settings
+  const options = {
+    usePolling: settings.usePolling,
+    ignoreInitial: true
   }
 
-
-// ------------------------------------------------------------------------------------------------
-// livereload
-
-	function livereload()
-	{
-	  // properties
-    const root = this.root
-    const livereload = require('livereload')
-
-		// server
-		function reload (file)
-		{
-			file = file.replace(root, '')
-			log('change: ' + file)
-			server.refresh('change:' + file, false)
-		}
-
-		// watch
-    chokidar
-      .watch(this.paths, watchOptions)
-			.on('change', reload)
-			.on('add', reload)
-			.on('unlink', reload)
-
-		// debug
-		logPaths('LiveReload', this.paths)
-
-	  // start
-    const server = livereload.createServer({start: true})
-	}
-
-// ------------------------------------------------------------------------------------------------
-// browsersync
-
-  function browsersync (files, options)
-	{
-	  // properties
-    const root = this.root
-    const browsersync = require('browser-sync').create()
-    let proxy = this.proxy || ''
-
-		// defaults WORKS!
-	  // url = http://localhost:3002/sketchpad/settings
-		var defaults = {
-    	//open: 'external',
-      host: 'localhost',
-      proxy: 'sketchpad.dev:80',
-			//proxy: proxy,
-			notify: true,
-      logSnippet: true,
-			ghostMode: false,
-			watchOptions: watchOptions
-		}
-
-		// defaults
-		defaults = {
-    	//open: 'external',
-      //host: 'localhost',
-      proxy: 'sketchpad.dev:80',
-			//proxy: proxy,
-			notify: true,
-      logSnippet: true,
-			ghostMode: false,
-			watchOptions: watchOptions
-		}
-
-		const defaultFiles = {
-			match: this.paths,
-			fn: function(event, file)
-			{
-				file = file.substr(root.length)
-				log(event + ': ' + file);
-
-        // run
-				/\.(js|css)$/.test(file)
-					? browsersync.reload(file)
-					: this.sockets.emit('sketchpad:change', {type:event, file: file})
-			}
-		}
-
-		// options
-		files = files || []
-		options = Object.assign(defaults, options)
-		options.files = files.concat(defaultFiles)
-
-		// debug
-		logPaths('BrowserSync', files.concat(this.paths))
-    console.log(options)
-
-		// start
-    browsersync.init(options)
-	}
-
-// ------------------------------------------------------------------------------------------------
-// functions
-
-  function getPaths (settings)
-  {
-    return settings.paths.controllers
-      .filter(obj => obj.enabled)
-      .map(obj => obj.path)
-      .concat(settings.paths.assets)
-      .concat(settings.paths.views)
-      .map(path => makeGlob(path))
+  // callbacks
+  const reload = (file, type) => {
+    file = file.replace(root, '')
+    log(pad('[' + type + ']', 8) + ' > ' + colors.cyan(file))
+    server.refresh(type + ':' + file)
   }
 
-  function start ()
-  {
-    const watcher = argv.browsersync
-      ? 'browsersync'
-      : argv.livereload
-        ? 'livereload'
-        : settings.watcher.toLowerCase()
-    switch (watcher)
-    {
-      case 'browsersync':
-        this.browsersync.apply(this, arguments)
-        break
-      case 'livereload':
-        this.livereload.apply(this, arguments)
-        break
-      default:
-        console.log('No file watcher assigned from Sketchpad')
+  const restart = () => {
+    this.load()
+    if (JSON.stringify(settings) !== JSON.stringify(this.settings)) {
+      wp.close()
+      ws.close()
+      server.close();
+      setTimeout(this.watch.bind(this), 500)
     }
   }
 
-// ------------------------------------------------------------------------------------------------
-// variables
+  // restart when settings changes
+  const ws = chokidar
+    .watch(settingsPath, options)
+    .on('change', restart)
 
-	// options
-	const isVagrant     = process.env.PWD.indexOf('/vagrant/') > -1
-	const watchOptions  = {usePolling: isVagrant || !!argv.usePolling}
-	let settings
+  // watch
+  const wp = chokidar
+    .watch(paths, options)
+    .on('add', file => reload(file, 'add'))
+    .on('change', file => reload(file, 'change'))
+    .on('unlink', file => reload(file, 'delete'))
 
+  // debug
+  const verb = settings.usePolling ? 'polling' : 'watching'
+  log('Starting Sketchpad Reload, ' + verb + ' "' + settings.host + '" paths:')
+  console.log(paths.map(p => '  - ' + colors.cyan(p)).join('\n'))
 
-// ------------------------------------------------------------------------------------------------
-// export
+  // start
+  const server = livereload.createServer({start: true})
+  server.watch('')
+}
 
-  module.exports = function (root, storage)
-  {
-    // wrangle roots
-    const calling = path.dirname(stack()[1].getFileName()) + '/'
-    if (!root) {
-      root = calling
-    }
-    else {
-      if (!path.isAbsolute(root)) {
-        root = path.normalize(calling + root)
-      }
-    }
-
-    // settings
-    const support     = path.normalize(root + '/' + (storage || 'storage') + '/')
-
-    // settings
-    settings        = require(support + 'sketchpad/settings.json')
-
-    // paths
-    let paths       = getPaths(settings)
-    let abspaths 	  = paths.map( p => path.normalize(root + '/' + p))
-
-    // return
-    return {
-      root        : root,
-      paths       : abspaths,
-      start       : start,
-      livereload  : livereload,
-      browsersync : browsersync,
-      proxy       : argv.proxy || '',
-      server      : null
-    }
+function load () {
+  const str = fs.readFileSync(settingsPath, 'utf8')
+  if (str) {
+    const settings = JSON.parse(str)
+    this.settings = settings.livereload
+    this.paths = getPaths(settings)
+      .map(p => path.normalize(this.root + '/' + p))
+      .map(p => makeGlob(p))
   }
+  return this
+}
+
+function init (root, storage) {
+  // root path
+  const calling = path.dirname(stack()[1].getFileName()) + '/'
+  sketchpad.root = !root
+    ? root = calling
+    : path.isAbsolute(root)
+      ? root
+      : path.normalize(calling + root)
+
+  // settings path
+  settingsPath = path.normalize(sketchpad.root + '/' + (storage || 'storage') + '/sketchpad/settings.json')
+
+  // settings
+  return sketchpad.load()
+}
+
+// ------------------------------------------------------------------------------------------------
+// main
+
+let settingsPath = ''
+let sketchpad = {
+  root: '',
+  paths: [],
+  settings: {},
+  load: load,
+  watch: watch
+}
+
+module.exports = init
