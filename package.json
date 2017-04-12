@@ -4,14 +4,13 @@
   "description": "Live-reload functionality for Laravel Sketchpad",
   "main": "index.js",
   "dependencies": {
-  },
-  "devDependencies": {
     "callsite": "1.0.0",
     "chokidar": "1.6.1",
     "colors": "1.1.2",
     "livereload": "0.6.2",
     "path": "0.12.7"
   },
+  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
