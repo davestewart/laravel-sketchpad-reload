@@ -46,6 +46,7 @@ function getPaths (settings) {
     .concat(settings.paths.assets)
     .concat(settings.paths.views)
     .concat(settings.livereload.paths)
+    .sort()
 }
 
 // ------------------------------------------------------------------------------------------------
