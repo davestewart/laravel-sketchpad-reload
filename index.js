@@ -25,6 +25,12 @@ function log (value) {
   console.log(timestamp() + ' ' + values)
 }
 
+function logBullet (title, value) {
+  !value
+    ? console.log('  - ' + colors.cyan(title))
+    : console.log('  - ' + title + ': ' + colors.cyan(value))
+}
+
 function makeGlob (path, ext) {
   return path.replace(/\/*$/, '/') + '**/*' + (ext || '')
 }
@@ -92,10 +98,15 @@ function watch () {
     .on('change', file => reload(file, 'change'))
     .on('unlink', file => reload(file, 'delete'))
 
-  // debug
-  const verb = settings.usePolling ? 'polling' : 'watching'
-  log('Starting Sketchpad Reload, ' + verb + ' "' + settings.host + '" paths:')
-  console.log(paths.map(p => '  - ' + colors.cyan(p)).join('\n'))
+  // log
+  log('Starting Sketchpad Reload...')
+  console.log('\nSettings:\n')
+  logBullet('host', settings.host)
+  logBullet('root', root)
+  logBullet('mode', settings.usePolling ? 'polling' : 'watching')
+  console.log('\nFolders:\n')
+  paths.forEach(p => logBullet(p.replace(root, '')))
+  console.log()
 
   // start
   const server = livereload.createServer({start: true})
