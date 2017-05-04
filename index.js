@@ -116,15 +116,16 @@ function load () {
 
 function init (root, storage) {
   // root path
-  const calling = path.dirname(stack()[1].getFileName()) + '/'
-  sketchpad.root = !root
+  const calling = path.dirname(stack()[1].getFileName())
+  root = !root || root === '.' || root === './'
     ? root = calling
     : path.isAbsolute(root)
       ? root
       : path.normalize(calling + root)
+  sketchpad.root = root.replace(/\/*$/, '/');
 
   // settings path
-  settingsPath = path.normalize(sketchpad.root + '/' + (storage || 'storage') + '/sketchpad/settings.json')
+  settingsPath = path.normalize(sketchpad.root + (storage || 'storage') + '/sketchpad/settings.json')
 
   // settings
   return sketchpad.load()
