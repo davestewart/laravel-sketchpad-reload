@@ -69,6 +69,19 @@ function watch () {
     ignoreInitial: true
   }
 
+  // log
+  log('Starting Sketchpad Reload...')
+  console.log('\nSettings:\n')
+  logBullet('host', settings.host)
+  logBullet('root', root)
+  logBullet('mode', settings.usePolling ? 'polling' : 'watching')
+  console.log('\nFolders:\n')
+  paths.forEach(p => logBullet(p.replace(root, '')))
+  console.log()
+
+  // server
+  const server = livereload.createServer({start: true})
+
   // callbacks
   const reload = (file, type) => {
     file = file.replace(root, '')
@@ -91,26 +104,12 @@ function watch () {
     .watch(settingsPath, options)
     .on('change', restart)
 
-  // watch
+  // watch configured paths
   const wp = chokidar
     .watch(paths, options)
     .on('add', file => reload(file, 'add'))
     .on('change', file => reload(file, 'change'))
     .on('unlink', file => reload(file, 'delete'))
-
-  // log
-  log('Starting Sketchpad Reload...')
-  console.log('\nSettings:\n')
-  logBullet('host', settings.host)
-  logBullet('root', root)
-  logBullet('mode', settings.usePolling ? 'polling' : 'watching')
-  console.log('\nFolders:\n')
-  paths.forEach(p => logBullet(p.replace(root, '')))
-  console.log()
-
-  // start
-  const server = livereload.createServer({start: true})
-  server.watch('')
 }
 
 function load () {
