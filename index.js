@@ -31,9 +31,7 @@ function log (value) {
 }
 
 function logBullet (title, value) {
-  !value
-    ? console.log('  - ' + colors.cyan(title))
-    : console.log('  - ' + title + ': ' + colors.cyan(value))
+  console.log('  - ' + title + ': ' + colors.cyan(value || ''))
 }
 
 function makeGlob (path, ext) {
