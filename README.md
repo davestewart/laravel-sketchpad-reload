@@ -27,7 +27,7 @@ Next, create a new file `sketchpad.js`, add the following code, and save:
 require('sketchpad-reload').watch()
 ```
 
-Once installed, run with a simple call: 
+To start Sketchpad Reload, call the script using Node: 
 
 ```text
 node sketchpad
