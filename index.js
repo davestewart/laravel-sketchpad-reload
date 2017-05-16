@@ -86,7 +86,7 @@ function getPaths (settings) {
 function watch () {
   // initialize
   if (!this.root) {
-    if(!init()) {
+    if(!this.init()) {
       return
     }
   }
