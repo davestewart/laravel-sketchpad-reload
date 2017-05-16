@@ -20,6 +20,11 @@ function timestamp () {
   return '[' + colors.gray(timestamp) + ']'
 }
 
+function error (str) {
+  console.log(colors.red('\nERROR! ' + str + '\n'))
+  return false
+}
+
 function log (value) {
   const values = Array.prototype.slice.call(arguments).join(' ')
   console.log(timestamp() + ' ' + values)
@@ -59,7 +64,20 @@ function getPaths (settings) {
 // main
 // ------------------------------------------------------------------------------------------------
 
+/**
+ * Set up servers and watches
+ *
+ * @see https://www.npmjs.com/package/livereload
+ * @see https://github.com/paulmillr/chokidar
+ */
 function watch () {
+  // initialize
+  if (!this.root) {
+    if(!init()) {
+      return
+    }
+  }
+
   // properties
   const root = this.root
   const paths = [].concat(this.paths)
@@ -79,7 +97,7 @@ function watch () {
   paths.forEach(p => logBullet(p.replace(root, '')))
   console.log()
 
-  // server
+  // livereload server, but without watches
   const server = livereload.createServer({start: true})
 
   // callbacks
@@ -112,7 +130,7 @@ function watch () {
 
   // restart when settings changes
   const ws = chokidar
-    .watch(settingsPath, options)
+    .watch(settingsFile, options)
     .on('change', restart)
 
   // watch configured paths
@@ -123,8 +141,13 @@ function watch () {
     .on('unlink', file => reload(file, 'delete'))
 }
 
+/**
+ * Load the settings file contents and assign to properties
+ *
+ * @returns {boolean}
+ */
 function load () {
-  const str = fs.readFileSync(settingsPath, 'utf8')
+  const str = fs.readFileSync(settingsFile, 'utf8')
   if (str) {
     const settings = JSON.parse(str)
     this.settings = settings.livereload
@@ -132,9 +155,15 @@ function load () {
       .map(p => path.normalize(this.root + '/' + p))
       .map(p => makeGlob(p))
   }
-  return this
 }
 
+/**
+ * Initialize Sketchpad, optionally with non-standard paths
+ *
+ * @param   {string}  [root]      Relative path to Laravel root folder
+ * @param   {string}  [storage]   Relative path to storage folder from root
+ * @returns {boolean}
+ */
 function init (root, storage) {
   // root path
   const calling = path.dirname(stack()[1].getFileName())
@@ -143,25 +172,36 @@ function init (root, storage) {
     : path.isAbsolute(root)
       ? root
       : path.normalize(calling + root)
-  sketchpad.root = root.replace(/\/*$/, '/');
+  sketchpad.root = root.replace(/\/*$/, '/')
 
   // settings path
-  settingsPath = path.normalize(sketchpad.root + (storage || 'storage') + '/sketchpad/settings.json')
+  const settingsFolder = path.normalize(sketchpad.root + (storage || 'storage') + '/sketchpad/')
+  settingsFile = settingsFolder + 'settings.json'
 
-  // settings
-  return sketchpad.load()
+  // check folder
+  if (!fs.existsSync(settingsFolder)) {
+    return error('Folder "' +settingsFolder+ '" not found')
+  }
+  if (!fs.existsSync(settingsFile)) {
+    return error('File "settings.json" not found in "' +settingsFolder+ '"')
+  }
+
+  // load settings
+  sketchpad.load()
+  return this
 }
 
 // ------------------------------------------------------------------------------------------------
 // main
 
-let settingsPath = ''
+let settingsFile = ''
 let sketchpad = {
-  root: '',
+  root: null,
   paths: [],
   settings: {},
+  init: init,
   load: load,
   watch: watch
 }
 
-module.exports = init
+module.exports = sketchpad
