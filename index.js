@@ -46,6 +46,19 @@ function pad (str, length) {
   return str
 }
 
+function getCallingScript() {
+  const lines = stack()
+  const thisFile = lines.shift().getFileName();
+  while (lines.length) {
+    let nextFile = lines.shift().getFileName()
+    if (nextFile !== thisFile) {
+      return nextFile
+    }
+  }
+  error('Unable to determine calling module')
+  return thisFile;
+}
+
 // ------------------------------------------------------------------------------------------------
 // helpers
 // ------------------------------------------------------------------------------------------------
@@ -165,8 +178,10 @@ function load () {
  * @returns {boolean}
  */
 function init (root, storage) {
+  // calling path
+  const calling = path.dirname(getCallingScript())
+
   // root path
-  const calling = path.dirname(stack()[1].getFileName())
   root = !root || root === '.' || root === './'
     ? root = calling
     : path.isAbsolute(root)
@@ -178,7 +193,7 @@ function init (root, storage) {
   const settingsFolder = path.normalize(sketchpad.root + (storage || 'storage') + '/sketchpad/')
   settingsFile = settingsFolder + 'settings.json'
 
-  // check folder
+  // check for settings
   if (!fs.existsSync(settingsFolder)) {
     return error('Folder "' +settingsFolder+ '" not found')
   }
