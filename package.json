@@ -1,6 +1,6 @@
 {
   "name": "sketchpad-reload",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Live-reload functionality for Laravel Sketchpad",
   "main": "index.js",
   "dependencies": {
