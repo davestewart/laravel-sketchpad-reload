@@ -92,9 +92,20 @@ function watch () {
   const restart = () => {
     this.load()
     if (JSON.stringify(settings) !== JSON.stringify(this.settings)) {
+
+      // close chokidars
       wp.close()
       ws.close()
-      server.close();
+
+      // hack to prevent errors on closing non-watched server
+      if (server.watcher) {
+        server.close();
+      } else {
+        server.server._server.close();
+        server.server.close();
+      }
+
+      // restart
       setTimeout(this.watch.bind(this), 500)
     }
   }
