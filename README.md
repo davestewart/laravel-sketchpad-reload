@@ -20,7 +20,11 @@ If you have a standard Laravel setup, install Sketchpad Reload to your root fold
 
 ```text
 npm install sketchpad-reload --save
-echo "require('sketchpad-reload')().watch()" > sketchpad.js
+```
+
+Next, create a new file `sketchpad.js`, add the following code, and save:
+ ```text
+require('sketchpad-reload').watch()
 ```
 
 Once installed, run with a simple call: 
